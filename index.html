@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>Симулятор Лазерной Сварки v2.1</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --text: #0f172a;
+            --success: #15803d;
+            --border: #cbd5e1;
+            --danger: #ef4444;
+            --warning-bg: #fef2f2;
+            --warning-border: #fca5a5;
+            --warning-text: #b91c1c;
+            --overlap-bg: #fff7ed;
+            --overlap-border: #fed7aa;
+            --overlap-text: #c2410c;
+            --tech-ideal: #0284c7; 
+            --tech-ideal-bg: #f0f9ff;
+            --tech-ideal-border: #bae6fd;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text); padding: 12px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; overflow: hidden; overscroll-behavior-y: none; }
+        
+        .main-layout { display: grid; grid-template-columns: 460px 1fr; gap: 16px; width: 100%; max-width: 1080px; height: calc(100vh - 24px); }
+        .left-side-panel { display: flex; flex-direction: column; gap: 10px; width: 460px; height: 100%; flex-shrink: 0; }
+        .panel-monolith { display: flex; flex-direction: column; gap: 4px; background: var(--card-bg); padding: 12px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+        
+        h1 { font-size: 14px; font-weight: bold; color: #2563eb; text-align: center; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; margin-bottom: 6px; }
+        .panel-row-wrapper { display: grid; grid-template-columns: 1.15fr 160px; gap: 10px; align-items: start; }
+        .control-matrix { display: grid; grid-template-columns: 40px 1fr 40px; gap: 4px; align-items: center; }
+        .matrix-header { grid-column: span 3; text-align: center; font-size: 10px; font-weight: bold; color: #475569; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 1px; margin-bottom: 1px; }
+        .btn-ctrl { height: 32px; border-radius: 6px; border: none; background: var(--primary); color: white; font-size: 16px; font-weight: bold; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        .btn-ctrl:active { background: var(--primary-dark); }
+        .value-display { text-align: center; font-size: 12px; font-weight: 700; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; height: 32px; display: flex; align-items: center; justify-content: center; color: #0f172a; }
+        
+        .right-arc-block { display: grid; grid-template-columns: 110px 44px; gap: 6px; align-items: start; }
+        .arc-section { position: relative; width: 110px; height: 146px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; grid-column: 1; }
+        #slider-canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        .speed-readout-box { position: absolute; z-index: 2; text-align: center; width: 75px; left: 15px; }
+        .speed-readout-title { font-size: 8px; font-weight: bold; color: #64748b; text-transform: uppercase; }
+        .speed-readout-val { font-size: 12px; font-weight: 800; color: var(--primary); margin-top: 1px; line-height: 1.1; }
+        
+        .speed-buttons-column { display: flex; flex-direction: column; gap: 10px; height: 146px; justify-content: center; grid-column: 2; }
+        .btn-speed { height: 46px; width: 100%; font-size: 22px; border-radius: 6px; }
+        .btn-reset { grid-column: span 2; height: 38px; background-color: var(--danger); color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; padding: 2px; margin-top: 4px; }
+        
+        .right-side-panel { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; min-width: 0; }
+        .fixed-right-top { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+        
+        .warning-box { background: var(--warning-bg); border: 2px solid var(--warning-border); color: var(--warning-text); padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: bold; line-height: 1.25; width: 100%; }
+        .overlap-box { background: var(--overlap-bg); border: 2px solid var(--overlap-border); color: var(--overlap-text); padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; line-height: 1.4; width: 100%; }
+        .visual-panel { display: flex; flex-direction: row; align-items: center; gap: 14px; background: var(--card-bg); border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        #circle-canvas { background: #fafafa; border-radius: 50%; border: 1px dashed #cbd5e1; flex-shrink: 0; }
+        .legend-box { flex: 1; font-size: 11px; display: flex; flex-direction: column; gap: 2px; max-height: 110px; overflow-y: auto; padding-left: 2px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .color-dot { width: 9px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid #cbd5e1; flex-shrink: 0; }
+        
+        .result-title { font-weight: bold; color: var(--text); font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; flex-shrink: 0; }
+        .total-pulses { font-size: 11px; color: #64748b; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 20px; }
+        
+        .scrollable-results-area { flex-grow: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; padding-right: 4px; min-height: 0; }
+        .speed-list { display: flex; flex-direction: column; gap: 8px; }
+        .speed-item { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; transition: all 0.15s; }
+        .speed-item:hover { border-color: var(--primary); background: #f0f5ff; }
+        .speed-header { display: flex; justify-content: space-between; align-items: center; line-height: 1.1; }
+        .speed-val { font-size: 13px; font-weight: 800; color: var(--success); }
+        
+        .speed-item.tech-perfect-mode { background: var(--tech-ideal-bg); border-color: var(--tech-ideal-border); }
+        .speed-item.tech-perfect-mode .speed-val { color: var(--tech-ideal); }
+        .speed-item.active-speed { border-color: var(--primary); box-shadow: 0 0 0 2px #bfdbfe; }
+        
+        .speed-type { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: bold; }
+        .type-opt { background: #dcfce7; color: #16a34a; }
+        .type-perfect { background: #e0f2fe; color: #0284c7; }
+        .type-approx { background: #fef9c3; color: #ca8a04; }
+        
+        .speed-details { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 11px; color: #475569; border-top: 1px solid #e2e8f0; margin-top: 4px; padding-top: 5px; line-height: 1.2; }
+        .no-results { text-align: center; color: #94a3b8; font-size: 12px; padding: 15px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1; }
+
+        @media (max-width: 800px) and (orientation: portrait) {
+            body { padding: 0; height: 100vh; overflow: hidden; }
+            .main-layout { display: flex; flex-direction: column; height: 100vh; border-radius: 0; border: none; padding: 8px; gap: 6px; background: #f1f5f9; }
+            .left-side-panel { width: 100%; height: auto; flex-shrink: 0; gap: 4px; }
+            .panel-monolith { padding: 6px; gap: 2px; border-radius: 12px; }
+            .panel-row-wrapper { grid-template-columns: 1.25fr 150px; gap: 6px; }
+            .control-matrix { gap: 2px; max-height: 190px; }
+            .btn-ctrl { height: 30px; font-size: 14px; }
+            .value-display { height: 30px; font-size: 11px; }
+            .right-arc-block { grid-template-columns: 100px 40px; gap: 4px; }
+            .arc-section { height: 112px; width: 100px; }
+            #slider-canvas { height: 112px !important; }
+            .speed-readout-box { left: 10px; width: 70px; }
+            .speed-buttons-column { height: 112px; gap: 4px; width: 40px; }
+            .btn-speed { height: 34px; font-size: 18px; }
+            .btn-reset { height: 32px; padding: 0; font-size: 10px; margin-top: 2px; }
+            .right-side-panel { flex-grow: 1; height: auto; overflow: hidden; gap: 6px; }
+            .fixed-right-top { gap: 6px; }
+            .visual-panel { padding: 6px; }
+            #circle-canvas { width: 90px !important; height: 90px !important; }
+            .legend-box { max-height: 90px; font-size: 10px; }
+            .scrollable-results-area { overflow-y: scroll; }
+        }
+        .author-bottom { grid-column: span 2; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-top: 2px; margin-bottom: 0; line-height: 1; letter-spacing: 0.5px; }
+        #joke-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #ffffff; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
+        .joke-text { color: #ef4444; font-size: 20px; font-weight: bold; text-align: center; line-height: 1.5; max-width: 440px; user-select: none; }
+      /* Размещение ника разработчика в самом низу шуточного экрана */
+        .joke-author {
+    position: absolute;
+    bottom: 25px; /* Жестко прижимает ник к нижнему краю дисплея */
+    left: 50%;
+    transform: translateX(-50%); /* Идеально центрирует текст по горизонтали */
+    color: #475569; /* Сдержанный, читаемый темно-серый/черный цвет */
+    font-size: 11px; /* Мелкий, аккуратный шрифт */
+    font-style: italic;
+    letter-spacing: 0.5px;
+    user-select: none;
+}
+    </style>
+</head>
+<body>
+
+<!-- ======================================================================= -->
+<!-- ⛔ /* --- НАЧАЛО ШУТОЧНОГО МОДУЛЯ (HTML) --- */                         -->
+<div id="joke-overlay">
+    <div class="joke-text">Внимание!!!<br>Действие пробного периода завершено.<br><br>Для приобретения лицензии обратитесь к разработчику.</div>
+    <!-- СТРОКА С ВАШИМ НИКОМ -->
+    <div class="joke-author">Разработчик: Nialex</div>
+</div>
+
+<!-- ⛔ /* --- КОНЕЦ ШУТОЧНОГО МОДУЛЯ (HTML) --- */                          -->
+<!-- ======================================================================= -->
+
+<div class="main-layout">
+    <div class="left-side-panel">
+        <div class="panel-monolith">
+            <h1>Симулятор Лазерной Сварки v2.1</h1>
+            <div class="panel-row-wrapper">
+                <div class="control-matrix">
+                    <div class="matrix-header">Диаметр детали</div>
+                    <button class="btn-ctrl" id="btn-d-minus">−</button>
+                    <div class="value-display" id="disp-diameter">Диаметр</div>
+                    <button class="btn-ctrl" id="btn-d-plus">+</button>
+                    
+                    <div class="matrix-header">Частота лазера</div>
+                    <button class="btn-ctrl" id="btn-f-minus">−</button>
+                    <div class="value-display" id="disp-freq">Частота</div>
+                    <button class="btn-ctrl" id="btn-f-plus">+</button>
+                    
+                    <div class="matrix-header">Время сварки</div>
+                    <button class="btn-ctrl" id="btn-t-minus">−</button>
+                    <div class="value-display" id="disp-time">Время сварки</div>
+                    <button class="btn-ctrl" id="btn-t-plus">+</button>
+                    
+                    <div class="matrix-header">Диаметр пятна лазера</div>
+                    <button class="btn-ctrl" id="btn-spot-minus">−</button>
+                    <div class="value-display" id="disp-spot">Пятно</div>
+                    <button class="btn-ctrl" id="btn-spot-plus">+</button>
+                </div>
+                
+                <div class="right-arc-block">
+                    <div class="arc-section">
+                        <canvas id="slider-canvas" width="110" height="146"></canvas>
+                        <div class="speed-readout-box">
+                            <div class="speed-readout-title">СКОРОСТЬ</div>
+                            <div id="manual-speed-val" class="speed-readout-val">0<br>об/мин</div>
+                        </div>
+                    </div>
+                    <div class="speed-buttons-column">
+                        <button class="btn-ctrl btn-speed" id="btn-s-plus">+</button>
+                        <button class="btn-ctrl btn-speed" id="btn-s-minus">−</button>
+                    </div>
+                    <button class="btn-reset" id="btn-clear"><span>🔄 Сбросить</span><span>всё</span></button>
+                    <div class="author-bottom">Разработчик: Nialex</div>
+                </div>
+            </div>
+        </div>
+        <div id="warning-container" style="flex-shrink:0;"></div>
+    </div>
+    
+    <div class="right-side-panel">
+        <div class="fixed-right-top">
+            <div id="overlap-container"></div>
+            <div id="visual-panel-block" class="visual-panel" style="display: none;">
+                <canvas id="circle-canvas" width="110" height="120" style="width:110px; height:120px;"></canvas>
+                <div class="legend-box" id="legend-container"></div>
+            </div>
+            <div class="result-title">
+                <span>📋 Рекомендуемые параметры (Клик для запуска):</span>
+                <span id="total-pulses" class="total-pulses">0 шт</span>
+            </div>
+        </div>
+        <div class="scrollable-results-area">
+            <div class="speed-list" id="results-container">
+                <div class="no-results">Настройте параметры на пульте для автоматического подбора скоростей</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+const state = { diameter: null, freq: null, time: null, spot: 0.15, selectedSpeed: null };
+let animationTimers = [], holdTimer = null, holdInterval = null;
+
+const config = {
+    diameter: { min: 0.5, max: 1.5, step: 0.1, label: "мм", placeholder: "Диаметр" },
+    freq: { min: 1, max: 20, step: 1, label: "Гц", placeholder: "Частота" },
+    time: { min: 1, max: 10, step: 1, label: "сек", placeholder: "Время" },
+    spot: { min: 0.10, max: 3.00, step: 0.01, label: "мм", placeholder: "Пятно" }
+};
+const turnColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#64748b'];
+
+function processChange(param, direction) {
+    const conf = config[param];
+    if (state[param] === null) { state[param] = direction > 0 ? conf.min : conf.max; } 
+    else { let newVal = parseFloat((state[param] + (direction * conf.step)).toFixed(2)); if (newVal >= conf.min && newVal <= conf.max) state[param] = newVal; }
+    updateDisplay(param); calculate(true); 
+}
+function updateDisplay(param) {
+    const el = document.getElementById(`disp-${param}`); if (!el) return;
+    if (state[param] === null) { el.innerText = config[param].placeholder; el.style.color = "#94a3b8"; } 
+    else { el.innerText = `${state[param].toFixed(param==='spot'?2:1)} ${config[param].label}`; el.style.color = "#0f172a"; }
+}
+function gcd(a, b) { a = Math.round(a); b = Math.round(b); while (b) { let t = b; b = a % b; a = t; } return a; }
+function stopAnimation() { animationTimers.forEach(timer => clearTimeout(timer)); animationTimers = []; }
+
+function drawArcSliderCanvas(speed) {
+    const canvas = document.getElementById('slider-canvas'); if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
+    const h = canvas.height; ctx.clearRect(0, 0, 110, h); const cx = 82; const cy = h / 2; const radius = 52;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0.5 * Math.PI, 1.5 * Math.PI); ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
+    let ratio = 0; if (speed !== null && speed >= 50) { ratio = (speed - 50) / 150; }
+    const currentAngle = 0.5 * Math.PI + ratio * Math.PI;
+    if (speed !== null && speed >= 50) { ctx.beginPath(); ctx.arc(cx, cy, radius, 0.5 * Math.PI, currentAngle); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke(); }
+    const hx = cx + radius * Math.cos(currentAngle); const hy = cy + radius * Math.sin(currentAngle);
+    ctx.beginPath(); ctx.arc(hx, hy, 8, 0, 2 * Math.PI); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 3; ctx.stroke();
+}
+
+function calculate(resetToAuto = true) {
+    stopAnimation();
+    const container = document.getElementById('results-container'); const warnBox = document.getElementById('warning-container');
+    const overBox = document.getElementById('overlap-container'); const pulseCounter = document.getElementById('total-pulses'); const visualBlock = document.getElementById('visual-panel-block');
+    if (!container || !warnBox || !overBox || !pulseCounter || !visualBlock) return;
+    warnBox.innerHTML = ''; overBox.innerHTML = ''; visualBlock.style.display = 'none';
+    if (state.diameter === null || state.freq === null || state.time === null || state.spot === null) {
+        container.innerHTML = '<div class="no-results">Настройте параметры на пульте для автоматического подбора скоростей</div>'; pulseCounter.innerText = '0 шт'; updateManualSpeed(null); return;
+    }
+    const D = state.diameter, f = state.freq, t = state.time, N = f * t, C = Math.PI * D, aStep = 360 / N, lStepMkm = (C / N) * 1000;   
+    pulseCounter.innerText = `${N} шт`;
+    if (lStepMkm < 50) { warnBox.innerHTML = `<div class="warning-box">🚨 ОПАСНОСТЬ ПЕРЕГРЕВА: Линейный шаг ${lStepMkm.toFixed(1)} мкм слишком мал для нержавеющей стали!</div>`; }
+    
+    let validSpeeds = [];
+    for (let K = 1; K <= 100; K++) {
+        let n = parseFloat(((K * 60) / t).toFixed(2));
+        if (n >= 50 && n <= 200) {
+            let cG = gcd(N, K);
+            if (cG === 1) {
+                const stepMm = lStepMkm / 1000;
+                const overlapPercent = ((1 - (stepMm / state.spot)) * 100);
+                const isTechPerfect = (overlapPercent >= 50 && overlapPercent <= 85);
+                validSpeeds.push({ n, K, isTechPerfect, label: isTechPerfect ? 'ТЕХН. ИДЕАЛ' : 'ИДЕАЛ' });
+            }
+        }
+    }
+    validSpeeds.sort((a, b) => a.n - b.n);
+
+    let htmlResults = '';
+    if (validSpeeds.length === 0) {
+        container.innerHTML = '<div class="no-results" style="color:#ef4444; border-color:#fca5a5; background:#fef2f2;">В диапазоне 50-200 об/мин нет безопасных ориентиров. Настройте скорость кнопками пульта.</div>';
+    } else {
+        validSpeeds.forEach(item => {
+            const flashAngle = (item.n * 360 / 60) * (1 / f);
+            const stepMm = lStepMkm / 1000;
+            const overlapPercent = ((1 - (stepMm / state.spot)) * 100);
+            const isSelected = state.selectedSpeed === item.n || (resetToAuto && !state.selectedSpeed && item.n === validSpeeds.n);
+            if (isSelected && resetToAuto) { state.selectedSpeed = item.n; }
+            
+            htmlResults += `
+                <div class="speed-item ${item.isTechPerfect ? 'tech-perfect-mode' : ''} ${isSelected ? 'active-speed' : ''}" onclick="selectSpeed(${item.n}, ${item.K})">
+                    <div class="speed-header">
+                        <span class="speed-val">${Number.isInteger(item.n) ? item.n : item.n.toFixed(2)} об/мин</span>
+                        <span class="speed-type ${item.isTechPerfect ? 'type-perfect' : 'type-opt'}">${item.label}</span>
+                    </div>
+                    <div class="speed-details">
+                        <div>Оборотов: <b>${item.K}</b></div>
+                        <div>Шаг шва: <b>${lStepMkm.toFixed(0)} мкм</b></div>
+                        <div>Перекрытие: <b style="color:${item.isTechPerfect?'#0284c7':''}">${overlapPercent < 0 ? 0 : overlapPercent.toFixed(1)}%</b></div>
+                        <div>Вспышка: <b>${flashAngle.toFixed(1)}°</b></div>
+                    </div>
+                </div>`;
+        }); container.innerHTML = htmlResults;
+    }
+    if (state.selectedSpeed) { updateManualSpeed(state.selectedSpeed); }
+}
+function selectSpeed(speed, K) { state.selectedSpeed = speed; calculate(false); }
+</script>
+<script>
+function updateManualSpeed(newSpeed) {
+    const valDisplay = document.getElementById('manual-speed-val');
+    if (newSpeed === null) { valDisplay.innerHTML = "0<br>об/мин"; drawArcSliderCanvas(null); return; }
+    if (newSpeed < 50) newSpeed = 50; if (newSpeed > 200) newSpeed = 200;
+    state.selectedSpeed = newSpeed; valDisplay.innerHTML = `${Number.isInteger(newSpeed) ? newSpeed : newSpeed.toFixed(2)}<br>об/мин`; drawArcSliderCanvas(newSpeed);
+    stopAnimation(); const items = document.querySelectorAll('.speed-item');
+    items.forEach(item => item.classList.remove('active-speed'));
+    items.forEach(item => { if(item.innerText.includes(`${Number.isInteger(newSpeed) ? newSpeed : newSpeed.toFixed(2)} об/мин`)) { item.classList.add('active-speed'); } });
+    let currentK = (newSpeed * state.time) / 60; runAnimatedSimulation(newSpeed, currentK, state.freq, state.freq * state.time);
+}
+
+function runAnimatedSimulation(speed, totalTurns, freq, totalPulses) {
+    const visualBlock = document.getElementById('visual-panel-block'); const canvas = document.getElementById('circle-canvas');
+    const legendContainer = document.getElementById('legend-container'); const overlapContainer = document.getElementById('overlap-container');
+    if (!visualBlock || !canvas || !legendContainer || !overlapContainer) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    visualBlock.style.display = 'flex'; legendContainer.innerHTML = ''; overlapContainer.innerHTML = '';
+    ctx.clearRect(0, 0, 110, 120); ctx.beginPath(); ctx.arc(55, 60, 45, 0, 2 * Math.PI); ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2; ctx.stroke();
+    const radius = 45; const cx = 55; const cy = 60; const flashAngle = (speed * 360 / 60) * (1 / freq); let currentAngle = 0;
+    let displayTurns = Math.max(1, Math.ceil(totalTurns)); let pulsesPerTurn = new Array(displayTurns).fill(0); const animationDelay = Math.max(25, 1000 / freq); 
+    let anglePositions = {}; let totalOverlapsCount = 0; let turnOverlapTracker = new Set(); let dotsData = [];
+    for (let i = 0; i < totalPulses; i++) {
+        let currentTurn = Math.floor(currentAngle / 360) + 1; if (currentTurn <= displayTurns) { pulsesPerTurn[currentTurn - 1]++; }
+        let normAngle = parseFloat((currentAngle % 360).toFixed(2)); if (normAngle < 0) normAngle += 360;
+        if (anglePositions[normAngle] !== undefined) { totalOverlapsCount++; turnOverlapTracker.add(currentTurn); } else { anglePositions[normAngle] = currentTurn; }
+        let color = turnColors[(currentTurn - 1) % turnColors.length]; let rad = (currentAngle - 90) * Math.PI / 180;
+        let x = cx + radius * Math.cos(rad); let y = cy + radius * Math.sin(rad); dotsData.push({ x, y, color }); currentAngle += flashAngle;
+    }
+    if (totalOverlapsCount > 0) {
+        let badTurnsList = Array.from(turnOverlapTracker).sort((a,b)=>a-b).join(', ');
+        overlapContainer.innerHTML = `<div class="overlap-box">⚠️ НАЛОЖЕНИЕ ТОЧЕК: Зафиксировано ${totalOverlapsCount} совпадений траектории на оборотах: [${badTurnsList}].</div>`;
+    }
+    let legendHTML = `<div style="font-weight:bold; margin-bottom: 2px;">Сварка ${Number.isInteger(speed) ? speed : speed.toFixed(2)} об/мин:</div>`;
+    for (let t = 1; t <= displayTurns; t++) {
+        let color = turnColors[(t - 1) % turnColors.length]; let count = pulsesPerTurn[t - 1] || 0;
+        legendHTML += `<div class="legend-item"><span class="color-dot" style="background:${color}"></span><span>Круг ${t}: <b>${count} имп.</b></span></div>`;
+    }
+    legendContainer.innerHTML = legendHTML;
+    dotsData.forEach((dotData, index) => {
+        let timer = setTimeout(() => { ctx.beginPath(); ctx.arc(dotData.x, dotData.y, 3.5, 0, 2 * Math.PI); ctx.fillStyle = dotData.color; ctx.fill(); }, index * animationDelay); animationTimers.push(timer);
+    });
+}
+
+function resetAll() {
+    stopHold(); stopAnimation(); state.diameter = null; state.freq = null; state.time = null; state.spot = 0.15; state.selectedSpeed = null;
+    updateDisplay('diameter'); updateDisplay('freq'); updateDisplay('time'); updateDisplay('spot'); calculate(true);
+}
+
+let holdTimeoutInstance = null;
+function setupHoldAction(elementId, actionFn) {
+    const el = document.getElementById(elementId); if (!el) return;
+    const startHold = (e) => { e.preventDefault(); actionFn(); let currentDelay = 400; const tick = () => { actionFn(); if (currentDelay > 35) currentDelay = Math.max(35, currentDelay * 0.8); holdTimeoutInstance = setTimeout(tick, currentDelay); }; holdInterval = setTimeout(tick, 500); };
+    el.addEventListener("mousedown", startHold); el.addEventListener("touchstart", startHold);
+}
+function stopHold() { clearTimeout(holdTimer); clearTimeout(holdInterval); clearTimeout(holdTimeoutInstance); }
+
+function checkMonthlyLicenseJoke() {
+    const now = new Date();
+    if (now.getDate() === 1) {
+        const currentMonthKey = "license_checked_" + now.getFullYear() + "_" + now.getMonth();
+        if (!localStorage.getItem(currentMonthKey)) {
+            const overlay = document.getElementById('joke-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                const closeJoke = () => { overlay.style.display = 'none'; localStorage.setItem(currentMonthKey, "true"); overlay.removeEventListener('click', closeJoke); overlay.removeEventListener('touchstart', closeJoke); };
+                overlay.addEventListener('click', closeJoke); overlay.addEventListener('touchstart', closeJoke, {passive: true});
+            }
+        }
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // =======================================================================
+    // ⛔ /* --- СИСТЕМНЫЙ ВЫЗОВ ШУТКИ --- */
+    checkMonthlyLicenseJoke();
+    // =======================================================================
+
+    updateDisplay('spot'); drawArcSliderCanvas(null);
+    setupHoldAction("btn-d-minus", () => processChange('diameter', -1)); setupHoldAction("btn-d-plus", () => processChange('diameter', 1));
+    setupHoldAction("btn-f-minus", () => processChange('freq', -1)); setupHoldAction("btn-f-plus", () => processChange('freq', 1));
+    setupHoldAction("btn-t-minus", () => processChange('time', -1)); setupHoldAction("btn-t-plus", () => processChange('time', 1));
+    setupHoldAction("btn-spot-minus", () => processChange('spot', -1)); setupHoldAction("btn-spot-plus", () => processChange('spot', 1));
+    setupHoldAction("btn-s-minus", () => { if(state.selectedSpeed && state.selectedSpeed > 50) updateManualSpeed(state.selectedSpeed - 1); });
+    setupHoldAction("btn-s-plus", () => { if(state.selectedSpeed && state.selectedSpeed < 200) updateManualSpeed(state.selectedSpeed + 1); else if (!state.selectedSpeed && state.time && state.freq) updateManualSpeed(50); });
+    window.addEventListener("mouseup", stopHold); window.addEventListener("touchend", stopHold); window.addEventListener("mouseleave", stopHold);
+    document.getElementById("btn-clear").addEventListener("click", resetAll);
+});
+</script>
+</body>
+</html>
